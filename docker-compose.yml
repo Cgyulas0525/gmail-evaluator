@@ -1,0 +1,140 @@
+services:
+  # Backend Laravel Service
+  backend:
+    build:
+      context: .
+      dockerfile: docker/php/Dockerfile
+    container_name: gmail_eval_backend
+    restart: unless-stopped
+    tty: true
+    environment:
+      SERVICE_NAME: backend
+      SERVICE_TAGS: dev
+    working_dir: /var/www
+    volumes:
+      - ./backend:/var/www
+      - ./docker/php/local.ini:/usr/local/etc/php/conf.d/local.ini
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - gmail_eval_network
+
+  # Laravel Scheduler (automatic email sync)
+  scheduler:
+    build:
+      context: .
+      dockerfile: docker/php/Dockerfile
+    container_name: gmail_eval_scheduler
+    restart: unless-stopped
+    working_dir: /var/www
+    command: php artisan schedule:work
+    volumes:
+      - ./backend:/var/www
+      - ./docker/php/local.ini:/usr/local/etc/php/conf.d/local.ini
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      backend:
+        condition: service_started
+    networks:
+      - gmail_eval_network
+
+  # Frontend React Service
+  frontend:
+    image: node:24-alpine
+    container_name: gmail_eval_frontend
+    restart: unless-stopped
+    working_dir: /app
+    volumes:
+      - ./frontend:/app
+    command: sh -c "npm install && npm run dev -- --host"
+    environment:
+      - VITE_API_URL=http://localhost:28088/api
+    ports:
+      - "5173:5173"
+    depends_on:
+      - backend
+    networks:
+      - gmail_eval_network
+
+  # Web Server (Nginx Proxy)
+  nginx:
+    image: nginx:alpine
+    container_name: gmail_eval_nginx
+    restart: unless-stopped
+    ports:
+      - "28088:80"
+    volumes:
+      - ./backend:/var/www
+      - ./docker/nginx/default.conf:/etc/nginx/conf.d/default.conf
+    depends_on:
+      - backend
+      - frontend
+    networks:
+      - gmail_eval_network
+
+  # Database Service (MySQL)
+  mysql:
+    image: mysql:8.0
+    container_name: gmail_eval_mysql
+    restart: unless-stopped
+    tty: true
+    ports:
+      - "23306:3306"
+    environment:
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-gmail_eval}
+      MYSQL_USER: ${MYSQL_USER:-gmail_user}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-gmail_password}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-gmail_root_password}
+    volumes:
+      - gmail_eval_mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "gmail_user", "-pgmail_password"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - gmail_eval_network
+
+  # Cache Service (Redis)
+  redis:
+    image: redis:alpine
+    container_name: gmail_eval_redis
+    restart: unless-stopped
+    ports:
+      - "26379:6379"
+    volumes:
+      - gmail_eval_redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - gmail_eval_network
+
+  # E-mail capturing Service (Mailhog)
+  mailhog:
+    image: mailhog/mailhog:latest
+    container_name: gmail_eval_mailhog
+    restart: unless-stopped
+    ports:
+      - "21026:1025" # SMTP Port
+      - "28026:8025" # Web UI Port
+    networks:
+      - gmail_eval_network
+
+networks:
+  gmail_eval_network:
+    driver: bridge
+
+volumes:
+  gmail_eval_mysql_data:
+    driver: local
+  gmail_eval_redis_data:
+    driver: local
