@@ -232,6 +232,11 @@ class EmailController extends Controller
             ->limit(5)
             ->get(['id', 'subject', 'sender', 'priority', 'category', 'received_at']);
 
+        $recentBilling = Email::where('category', 'billing')
+            ->orderBy('received_at', 'desc')
+            ->limit(8)
+            ->get(['id', 'subject', 'sender', 'priority', 'received_at']);
+
         return response()->json([
             'total_emails' => $totalEmails,
             'categories' => $categories,
@@ -239,7 +244,8 @@ class EmailController extends Controller
             'sentiments' => $sentiments,
             'trend' => $daysTrend,
             'accounts' => $accountsBreakdown,
-            'recent_urgent' => $recentUrgent
+            'recent_urgent' => $recentUrgent,
+            'recent_billing' => $recentBilling,
         ]);
     }
 }

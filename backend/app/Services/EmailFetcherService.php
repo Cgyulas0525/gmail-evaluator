@@ -52,36 +52,21 @@ class EmailFetcherService
             $this->login($account->email, $account->password);
             
             // Select INBOX
-            $selectInfo = $this->sendCommand("SELECT INBOX");
-            
-            // Search for UNSEEN messages first
-            $searchResult = $this->sendCommand("SEARCH UNSEEN");
+            $this->sendCommand('SELECT INBOX');
+
+            // Always sync the latest messages from INBOX, including already-read mail.
+            // Previously UNSEEN-only sync skipped read invoices and similar messages.
+            $searchResult = $this->sendCommand('SEARCH ALL');
             $uids = [];
             foreach ($searchResult as $line) {
                 if (preg_match('/^\* SEARCH (.+)$/i', $line, $matches)) {
-                    $uids = array_filter(explode(' ', trim($matches[1])));
+                    $allUids = array_values(array_filter(explode(' ', trim($matches[1])), 'is_numeric'));
+                    $uids = array_slice($allUids, -$limit);
                     break;
                 }
             }
 
-            // Fallback: If no unseen messages, fetch latest messages in the inbox
-            if (empty($uids)) {
-                Log::info("No unseen emails found. Fetching latest emails instead.");
-                $searchResult = $this->sendCommand("SEARCH ALL");
-                foreach ($searchResult as $line) {
-                    if (preg_match('/^\* SEARCH (.+)$/i', $line, $matches)) {
-                        $allUids = array_filter(explode(' ', trim($matches[1])));
-                        // Get latest $limit uids
-                        $uids = array_slice($allUids, -$limit);
-                        break;
-                    }
-                }
-            } else {
-                // Limit unseen emails to limit to avoid overloading
-                $uids = array_slice($uids, -$limit);
-            }
-
-            Log::info("Found " . count($uids) . " email UIDs to process.");
+            Log::info('Found '.count($uids).' email UIDs to process.');
 
             foreach ($uids as $uid) {
                 $uid = trim($uid);

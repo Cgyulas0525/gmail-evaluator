@@ -1,6 +1,6 @@
 ---
 name: gmail-evaluator-design
-description: Apply the Gmail Evaluator dark dashboard UI style. Use when updating frontend layout, sidebar, cards, inbox list, email detail panel, badges, forms, modals, or CSS in frontend/src/App.jsx and frontend/src/index.css.
+description: Apply the Gmail Evaluator Budget2-style UI (cream background, green sidebar/topbar, white cards). Use when updating frontend layout, sidebar, cards, inbox list, email detail panel, badges, forms, modals, or CSS in frontend/src/App.jsx and frontend/src/index.css.
 ---
 
 # Gmail Evaluator Design
@@ -9,39 +9,45 @@ description: Apply the Gmail Evaluator dark dashboard UI style. Use when updatin
 
 Use this skill when implementing or reviewing UI for the Gmail Evaluator app (`frontend/src/App.jsx`, `frontend/src/index.css`).
 
-## Visual Baseline
+## Visual Baseline (Budget2 / dinamicHP aligned)
 
-- Dark dashboard theme using CSS variables in `:root` (not Tailwind brand colors).
-- Background: `--bg-main`, cards: `--bg-card`, sidebar: `--bg-sidebar`.
-- Accent colors: `--primary` (cyan), `--accent` (purple), semantic `--success`, `--warning`, `--danger`.
-- Typography: `--font-body` (Inter), `--font-title` (Outfit).
-- Glassmorphism cards with `--shadow-main`, `--radius-lg/md/sm`.
+- **Background:** cream `#fdfaf3` (`--cream`, `--bg-main`)
+- **Chrome:** green sidebar + topbar `--brand-800` `#2d4a2b`, active nav `--brand-600` `#4a7c3f`
+- **Cards:** warm paper `--bg-card` (`#f8f1e4`), nested rows `--bg-surface` (`#f0e6d2`) — avoid pure white
+- **KPI tiles:** colored blocks (`.kpi-card--green`, `--red`, `--blue`) with white text
+- **Charts:** dark panels (`.panel-dark`, header `.panel-dark-header` on `--brand-700`)
+- **Typography:** Figtree (`--font-body`, `--font-title`)
+- **Primary actions:** green `.btn.btn-primary` (`--brand-600`)
 
 ## Layout Pattern
 
-1. Left sidebar (`.sidebar`) with logo + nav tabs: dashboard, inbox, accounts.
-2. Main content (`.main-content`) with top sync header (`.app-header`).
-3. Page header row: title + optional refresh/action button (`.page-header`).
-4. Content uses `.card`, `.dashboard-grid`, `.stats-grid` as appropriate.
+1. `.app-container` — flex shell
+2. `.sidebar` — fixed green nav (logo, tabs, footer status)
+3. `.main-shell` — offset by sidebar width
+4. `.topbar` — green header with page title + sync info
+5. `.main-content` — cream scroll area with alerts and tab content
+6. Optional `.page-header` — subtitle + action button (title lives in topbar)
 
 ## Inbox Pattern
 
-- Three-column inbox layout: filters, list (`.inbox-item`), detail panel (`.inbox-detail`).
-- Active list item: `.inbox-item.active`.
-- Badges for priority/sentiment/category using existing `badge-*` classes.
-- Detail actions in `.detail-actions` (Válasz, Továbbítás, Törlés).
+- `.inbox-layout` — list + detail
+- `.inbox-item` / `.inbox-item.active` — white cards, green active state
+- `.inbox-detail` — white card panel
+- Badges: `badge-priority-*`, `badge-sentiment-*`, `badge-category`
+- Detail actions: `.detail-actions` (Válasz, Továbbítás, Törlés)
 
 ## Forms and Modals
 
-- Inputs: `.form-group`, `.form-label`, `.form-input`.
-- Primary action: `.btn.btn-primary`; secondary: `.btn.btn-secondary`; destructive: `.btn.btn-danger`.
-- Compose modal: `.compose-overlay`, `.compose-modal`, `.compose-actions`.
+- Inputs: `.form-group`, `.form-label`, `.form-input` (white, gray border, green focus ring)
+- Buttons: `.btn-primary` (green), `.btn-secondary` (white), `.btn-danger` (red soft)
+- Compose: `.compose-overlay`, `.compose-modal`, `.compose-actions`
 
 ## Do Not
 
-- Introduce Inertia, Tailwind config, or Budget2 green ERP chrome.
-- Hardcode colors when an existing CSS variable exists.
-- Break mobile readability in inbox/detail panels without checking overflow.
+- Revert to dark glassmorphism / cyan-purple accent theme
+- Introduce Inertia or Tailwind config unless the project adopts them
+- Hardcode colors when an existing CSS variable exists
+- Break mobile readability in inbox/detail panels without checking overflow
 
 ## Acceptance Checklist
 
