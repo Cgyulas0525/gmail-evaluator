@@ -44,8 +44,11 @@ Use this skill when implementing or reviewing UI for the Gmail Evaluator app (`f
 
 ## Accounts tab (E-mail Fiókok)
 
+- Sidebar nav + topbar: **E-mail Fiókok** (nem Gmail-only felirat)
 - Provider `<select>`: Gmail vs Egyéni IMAP — toggles conditional IMAP/SMTP fields (`.form-group` grid for port/encryption)
+- Custom provider mezők: **IMAP felhasználónév** (opcionális, cPanel rövid név) + **IMAP mappa** (cPanel maildir, pl. `INBOX.info@menteshetes_hu`)
 - Reuse `GMAIL_MAIL_DEFAULTS` / `CUSTOM_MAIL_DEFAULTS` constants; `handleProviderChange()` resets mail fields
+- `CUSTOM_MAIL_DEFAULTS` példa: `imap_username: 'menteshe'`, `imap_mailbox: 'INBOX.info@menteshetes_hu'`, `mail.menteshetes.hu` host
 - Account list shows provider badge: „Gmail” | „Egyéni IMAP”
 
 ## Do Not

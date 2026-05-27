@@ -31,7 +31,7 @@ Use this skill for backend and API-facing frontend work in the Gmail Evaluator D
 
 | Service | Responsibility |
 |---------|----------------|
-| EmailFetcherService | IMAP connect via `connect(GmailAccount)` (account host/port), sync INBOX, MIME parsing, metadata |
+| EmailFetcherService | IMAP via `connect(GmailAccount)`, `$account->imapSelectCommand()` (not hardcoded INBOX), sync, MIME parsing |
 | EmailEvaluatorService | Gemini AI + rule-based fallback classification |
 | EmailProcessingService | Evaluate + optional auto-reply pipeline |
 | EmailAutoReplyService | Automatic billing/work replies via account SMTP (`smtpDsn()`) |
@@ -55,9 +55,15 @@ Use this skill for backend and API-facing frontend work in the Gmail Evaluator D
 ## Account mail settings (`gmail_accounts`)
 
 - `provider`: `gmail` (defaults via `GmailAccount::gmailDefaults()`) or `custom` (user-supplied IMAP/SMTP)
-- Model helpers: `settingsFromInput()`, `imapStreamHost()`, `imapPort()`, `smtpDsn()`
+- Per-account fields: `imap_host`, `imap_port`, `imap_encryption`, `smtp_host`, `smtp_port`, `smtp_encryption`
+- `imap_username` nullable — cPanel/webmail rövid login (pl. `menteshe`) ha ≠ teljes `email`
+- `imap_mailbox` default `INBOX`; cPanel maildir almappa pl. `INBOX.info@menteshetes_hu` (domain `.` → `_`)
+- Model helpers: `settingsFromInput()`, `authUsername()`, `imapStreamHost()`, `imapPort()`, `imapMailbox()`, `imapSelectCommand()`, `cpanelMailboxFromEmail()`, `smtpDsn()`
+- IMAP LOGIN + SMTP auth: `authUsername()` — `email` marad megjelenítésre / From címre
+- Sync/attachment: `$account->imapSelectCommand()` — soha ne hardcode `SELECT INBOX`
 - All IMAP services call `connect(GmailAccount $account)` — never hardcode `imap.gmail.com`
-- `POST /api/accounts`: validate `provider`, and `imap_host`/`smtp_host` when `provider=custom`
+- `POST /api/accounts`: validate `provider`, `imap_host`/`smtp_host` when `provider=custom`; optional `imap_username`, `imap_mailbox`
+- Connection test: `testConnection(email, password, mailSettings)` új fióknál; `testAccountConnection($account)` meglévőnél
 - Legacy rows: migration defaults preserve Gmail behavior
 
 ## Testing Locally
