@@ -31,11 +31,11 @@ Use this skill for backend and API-facing frontend work in the Gmail Evaluator D
 
 | Service | Responsibility |
 |---------|----------------|
-| EmailFetcherService | IMAP connect, sync INBOX, MIME parsing, metadata |
+| EmailFetcherService | IMAP connect via `connect(GmailAccount)` (account host/port), sync INBOX, MIME parsing, metadata |
 | EmailEvaluatorService | Gemini AI + rule-based fallback classification |
 | EmailProcessingService | Evaluate + optional auto-reply pipeline |
-| EmailAutoReplyService | Automatic billing/work replies via Gmail SMTP |
-| EmailComposeService | Manual reply/forward via Gmail SMTP |
+| EmailAutoReplyService | Automatic billing/work replies via account SMTP (`smtpDsn()`) |
+| EmailComposeService | Manual reply/forward via account SMTP (`smtpDsn()`) |
 | EmailAttachmentService | BODYSTRUCTURE parsing + on-demand IMAP download |
 
 ## API Response Conventions
@@ -51,6 +51,14 @@ Use this skill for backend and API-facing frontend work in the Gmail Evaluator D
 - Store `imap_uid` and `attachments` JSON on sync for attachment download
 - Auto-reply categories from `config/auto_reply.php` / `.env`
 - IMAP literal reads must use byte-accurate fread (not line-based parsing for attachments)
+
+## Account mail settings (`gmail_accounts`)
+
+- `provider`: `gmail` (defaults via `GmailAccount::gmailDefaults()`) or `custom` (user-supplied IMAP/SMTP)
+- Model helpers: `settingsFromInput()`, `imapStreamHost()`, `imapPort()`, `smtpDsn()`
+- All IMAP services call `connect(GmailAccount $account)` — never hardcode `imap.gmail.com`
+- `POST /api/accounts`: validate `provider`, and `imap_host`/`smtp_host` when `provider=custom`
+- Legacy rows: migration defaults preserve Gmail behavior
 
 ## Testing Locally
 

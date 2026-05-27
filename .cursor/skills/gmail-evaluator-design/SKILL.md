@@ -42,6 +42,12 @@ Use this skill when implementing or reviewing UI for the Gmail Evaluator app (`f
 - Buttons: `.btn-primary` (green), `.btn-secondary` (white), `.btn-danger` (red soft)
 - Compose: `.compose-overlay`, `.compose-modal`, `.compose-actions`
 
+## Accounts tab (E-mail Fiókok)
+
+- Provider `<select>`: Gmail vs Egyéni IMAP — toggles conditional IMAP/SMTP fields (`.form-group` grid for port/encryption)
+- Reuse `GMAIL_MAIL_DEFAULTS` / `CUSTOM_MAIL_DEFAULTS` constants; `handleProviderChange()` resets mail fields
+- Account list shows provider badge: „Gmail” | „Egyéni IMAP”
+
 ## Do Not
 
 - Revert to dark glassmorphism / cyan-purple accent theme

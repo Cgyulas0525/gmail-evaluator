@@ -63,9 +63,9 @@ class EmailAttachmentService
         $mimeType = $attachment['mime_type'] ?? 'application/octet-stream';
 
         try {
-            $this->connect();
-            $this->login($account->email, $account->password);
-            $this->sendCommand('SELECT INBOX');
+            $this->connect($account);
+            $this->login($account->authUsername(), $account->password);
+            $this->sendCommand($account->imapSelectCommand());
 
             $rawPart = $this->fetchPartRaw((int) $email->imap_uid, $partId);
             $binary = $this->decodePartContent($rawPart, $attachment['encoding'] ?? '');
@@ -424,12 +424,14 @@ class EmailAttachmentService
         return $content;
     }
 
-    private function connect(): void
+    private function connect(GmailAccount $account): void
     {
         $this->tagCount = 1;
-        $this->socket = @fsockopen('ssl://imap.gmail.com', 993, $errno, $errstr, 15);
+        $host = $account->imapStreamHost();
+        $port = $account->imapPort();
+        $this->socket = @fsockopen($host, $port, $errno, $errstr, 15);
         if (!$this->socket) {
-            throw new \RuntimeException("IMAP kapcsolódás sikertelen: $errstr ($errno)");
+            throw new \RuntimeException("IMAP kapcsolódás sikertelen ({$account->imap_host}:{$port}): $errstr ($errno)");
         }
 
         $greetingLine = $this->readLine();

@@ -8,6 +8,7 @@ use App\Services\EmailProcessingService;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Validation\Rule;
 
 class GmailAccountController extends Controller
 {
@@ -38,26 +39,38 @@ class GmailAccountController extends Controller
         $validated = $request->validate([
             'email' => 'required|email|unique:gmail_accounts,email',
             'password' => 'required|string|min:8',
+            'provider' => ['nullable', Rule::in(['gmail', 'custom'])],
+            'imap_username' => 'nullable|string|max:255',
+            'imap_host' => 'required_if:provider,custom|nullable|string|max:255',
+            'imap_port' => 'nullable|integer|min:1|max:65535',
+            'imap_encryption' => ['nullable', Rule::in(['ssl', 'tls', 'none'])],
+            'imap_mailbox' => 'nullable|string|max:255',
+            'smtp_host' => 'required_if:provider,custom|nullable|string|max:255',
+            'smtp_port' => 'nullable|integer|min:1|max:65535',
+            'smtp_encryption' => ['nullable', Rule::in(['ssl', 'tls', 'none'])],
         ]);
 
-        // Test connection first
-        $connectionTest = $this->fetcher->testConnection($validated['email'], $validated['password']);
-        
+        $mailSettings = GmailAccount::settingsFromInput($validated);
+
+        $connectionTest = $this->fetcher->testConnection(
+            $validated['email'],
+            $validated['password'],
+            $mailSettings
+        );
+
         if (!$connectionTest['success']) {
             return response()->json([
                 'message' => 'Connection test failed: ' . $connectionTest['message'],
-                'errors' => ['password' => ['A megadott jelszóval vagy e-mail címmel nem sikerült kapcsolódni a Gmail-hez. Kérlek ellenőrizd az alkalmazás-jelszót (App Password)!']]
+                'errors' => ['password' => ['A megadott adatokkal nem sikerült IMAP kapcsolódás. Ellenőrizd az e-mail címet, jelszót és szerverbeállításokat!']]
             ], 422);
         }
 
-        // Save
-        $account = GmailAccount::create([
+        $account = GmailAccount::create(array_merge($mailSettings, [
             'email' => $validated['email'],
             'password' => $validated['password'],
-            'status' => 'active'
-        ]);
+            'status' => 'active',
+        ]));
 
-        // Proactively fetch first few emails in background or synchronously to populate the DB
         try {
             $emails = $this->fetcher->fetchEmails($account, 50);
             $this->processor->processEmails($emails);
@@ -65,12 +78,11 @@ class GmailAccountController extends Controller
             Log::error("Initial email fetch failed for {$account->email}: " . $e->getMessage());
         }
 
-        // Reload count
         $account->loadCount('emails');
 
         return response()->json([
-            'message' => 'Gmail fiók sikeresen hozzáadva és tesztelve!',
-            'account' => $account
+            'message' => 'E-mail fiók sikeresen hozzáadva és tesztelve!',
+            'account' => $account,
         ], 210);
     }
 
@@ -79,15 +91,15 @@ class GmailAccountController extends Controller
      */
     public function testExistingConnection(GmailAccount $account): JsonResponse
     {
-        $test = $this->fetcher->testConnection($account->email, $account->password);
-        
+        $test = $this->fetcher->testAccountConnection($account);
+
         if ($test['success']) {
             $account->update(['status' => 'active', 'last_error' => null]);
             return response()->json(['success' => true, 'message' => 'A kapcsolat sikeres!']);
-        } else {
-            $account->update(['status' => 'error', 'last_error' => $test['message']]);
-            return response()->json(['success' => false, 'message' => $test['message']], 400);
         }
+
+        $account->update(['status' => 'error', 'last_error' => $test['message']]);
+        return response()->json(['success' => false, 'message' => $test['message']], 400);
     }
 
     /**
@@ -118,6 +130,6 @@ class GmailAccountController extends Controller
     public function destroy(GmailAccount $account): JsonResponse
     {
         $account->delete();
-        return response()->json(['message' => 'A Gmail fiók sikeresen eltávolítva!']);
+        return response()->json(['message' => 'Az e-mail fiók sikeresen eltávolítva!']);
     }
 }

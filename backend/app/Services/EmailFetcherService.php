@@ -18,19 +18,32 @@ class EmailFetcherService
     }
 
     /**
-     * Test connection to Gmail IMAP.
+     * Test IMAP connection with credentials and optional mail settings.
      *
-     * @param string $email
-     * @param string $password
      * @return array ['success' => bool, 'message' => string]
      */
-    public function testConnection(string $email, string $password): array
+    public function testConnection(string $email, string $password, array $mailSettings = []): array
+    {
+        $account = new GmailAccount(array_merge(GmailAccount::gmailDefaults(), $mailSettings, [
+            'email' => $email,
+            'imap_username' => $mailSettings['imap_username'] ?? null,
+        ]));
+
+        return $this->testAccountConnection($account, $password);
+    }
+
+    /**
+     * Test IMAP connection for an existing account.
+     *
+     * @return array ['success' => bool, 'message' => string]
+     */
+    public function testAccountConnection(GmailAccount $account, ?string $password = null): array
     {
         try {
-            $this->connect();
-            $this->login($email, $password);
+            $this->connect($account);
+            $this->login($account->authUsername(), $password ?? $account->password);
             $this->disconnect();
-            return ['success' => true, 'message' => 'Successfully connected to Gmail!'];
+            return ['success' => true, 'message' => 'IMAP kapcsolat sikeres!'];
         } catch (\Exception $e) {
             return ['success' => false, 'message' => $e->getMessage()];
         }
@@ -48,11 +61,11 @@ class EmailFetcherService
         $fetchedEmails = [];
         try {
             Log::info("Starting email fetch for account: {$account->email}");
-            $this->connect();
-            $this->login($account->email, $account->password);
+            $this->connect($account);
+            $this->login($account->authUsername(), $account->password);
             
             // Select INBOX
-            $this->sendCommand('SELECT INBOX');
+            $this->sendCommand($account->imapSelectCommand());
 
             // Always sync the latest messages from INBOX, including already-read mail.
             // Previously UNSEEN-only sync skipped read invoices and similar messages.
@@ -158,16 +171,16 @@ class EmailFetcherService
     }
 
     /**
-     * Connect to Gmail IMAP server.
+     * Connect to the account IMAP server.
      */
-    private function connect(): void
+    private function connect(GmailAccount $account): void
     {
-        $host = 'ssl://imap.gmail.com';
-        $port = 993;
-        
+        $host = $account->imapStreamHost();
+        $port = $account->imapPort();
+
         $this->socket = @fsockopen($host, $port, $errno, $errstr, 15);
         if (!$this->socket) {
-            throw new \Exception("Connection to Gmail IMAP failed: $errstr ($errno)");
+            throw new \Exception("IMAP kapcsolódás sikertelen ({$account->imap_host}:{$port}): $errstr ($errno)");
         }
         
         // Read greeting
@@ -178,19 +191,19 @@ class EmailFetcherService
     }
 
     /**
-     * Log in to Gmail IMAP server.
+     * Log in to the IMAP server.
      */
     private function login(string $email, string $password): void
     {
         // Sanitize password/credentials to prevent protocol injection
         $email = str_replace(["\r", "\n", '"'], '', $email);
         $password = str_replace(["\r", "\n", '"'], '', $password);
-        
+
         $response = $this->sendCommand("LOGIN \"$email\" \"$password\"");
         $lastLine = end($response);
-        
+
         if (!str_contains(strtolower($lastLine), 'ok')) {
-            throw new \Exception("Authentication failed for {$email}. Verify App Password and IMAP settings.");
+            throw new \Exception("IMAP bejelentkezés sikertelen ({$email}). Ellenőrizd a jelszót és az IMAP beállításokat.");
         }
     }
 

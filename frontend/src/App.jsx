@@ -4,8 +4,32 @@ import { apiFetch, API_BASE, setUnauthorizedHandler } from './api.js';
 const TAB_TITLES = {
   dashboard: 'Vezérlőpult',
   inbox: 'Intelligens Inbox',
-  accounts: 'Gmail Fiókok',
+  accounts: 'E-mail Fiókok',
   users: 'Felhasználók',
+};
+
+const GMAIL_MAIL_DEFAULTS = {
+  provider: 'gmail',
+  imap_username: '',
+  imap_mailbox: 'INBOX',
+  imap_host: 'imap.gmail.com',
+  imap_port: 993,
+  imap_encryption: 'ssl',
+  smtp_host: 'smtp.gmail.com',
+  smtp_port: 587,
+  smtp_encryption: 'tls',
+};
+
+const CUSTOM_MAIL_DEFAULTS = {
+  provider: 'custom',
+  imap_username: 'menteshe',
+  imap_mailbox: 'INBOX.info@menteshetes_hu',
+  imap_host: 'mail.menteshetes.hu',
+  imap_port: 993,
+  imap_encryption: 'ssl',
+  smtp_host: 'mail.menteshetes.hu',
+  smtp_port: 465,
+  smtp_encryption: 'ssl',
 };
 
 export default function App({ user, onLogout, onUserUpdate }) {
@@ -42,7 +66,11 @@ export default function App({ user, onLogout, onUserUpdate }) {
   const [alert, setAlert] = useState(null); // { type: 'success' | 'error', message: '' }
 
   // Form states
-  const [newAccount, setNewAccount] = useState({ email: '', password: '' });
+  const [newAccount, setNewAccount] = useState({
+    email: '',
+    password: '',
+    ...GMAIL_MAIL_DEFAULTS,
+  });
   const [formErrors, setFormErrors] = useState({});
 
   // Search & Filter states for Inbox
@@ -248,7 +276,7 @@ export default function App({ user, onLogout, onUserUpdate }) {
       }
     } catch (e) {
       console.error(e);
-      showNotification('error', 'Nem sikerült betölteni a Gmail fiókokat.');
+      showNotification('error', 'Nem sikerült betölteni az e-mail fiókokat.');
     } finally {
       setLoadingAccounts(false);
     }
@@ -312,6 +340,15 @@ export default function App({ user, onLogout, onUserUpdate }) {
     }
   };
 
+  const handleProviderChange = (provider) => {
+    const mailDefaults = provider === 'custom' ? CUSTOM_MAIL_DEFAULTS : GMAIL_MAIL_DEFAULTS;
+    setNewAccount((prev) => ({
+      ...prev,
+      ...mailDefaults,
+      provider,
+    }));
+  };
+
   const handleAddAccount = async (e) => {
     e.preventDefault();
     setFormErrors({});
@@ -326,7 +363,7 @@ export default function App({ user, onLogout, onUserUpdate }) {
       
       if (res.ok) {
         showNotification('success', data.message || 'Fiók sikeresen hozzáadva!');
-        setNewAccount({ email: '', password: '' });
+        setNewAccount({ email: '', password: '', ...GMAIL_MAIL_DEFAULTS });
         fetchAccounts();
         fetchStats();
         fetchEmails();
@@ -414,7 +451,7 @@ export default function App({ user, onLogout, onUserUpdate }) {
   };
 
   const handleDeleteEmail = async (email) => {
-    if (!confirm('Biztosan törölni szeretnéd ezt az e-mailt az alkalmazásból? A Gmail postafiókban megmarad.')) return;
+    if (!confirm('Biztosan törölni szeretnéd ezt az e-mailt az alkalmazásból? A távoli postafiókban megmarad.')) return;
 
     try {
       const res = await apiFetch(`/emails/${email.id}`, { method: 'DELETE' });
@@ -435,12 +472,12 @@ export default function App({ user, onLogout, onUserUpdate }) {
   };
 
   const handleDeleteAccount = async (id) => {
-    if (!confirm('Biztosan törölni szeretnéd ezt a Gmail fiókot és a hozzá tartozó összes levelet?')) return;
+    if (!confirm('Biztosan törölni szeretnéd ezt az e-mail fiókot és a hozzá tartozó összes levelet?')) return;
     
     try {
       const res = await apiFetch(`/accounts/${id}`, { method: 'DELETE' });
       if (res.ok) {
-        showNotification('success', 'A Gmail fiók sikeresen törölve.');
+        showNotification('success', 'Az e-mail fiók sikeresen törölve.');
         fetchAccounts();
         fetchStats();
         fetchEmails();
@@ -683,7 +720,7 @@ export default function App({ user, onLogout, onUserUpdate }) {
               }}
             >
               <Icons.Accounts />
-              <span>Gmail Fiókok</span>
+              <span>E-mail Fiókok</span>
             </li>
             <li 
               className={`nav-item ${activeTab === 'users' ? 'active' : ''}`}
@@ -769,7 +806,7 @@ export default function App({ user, onLogout, onUserUpdate }) {
                 <span className="kpi-sub">Azonnali figyelmet igényel</span>
               </div>
               <div className="kpi-card kpi-card--blue">
-                <span className="kpi-label">Aktív Gmail fiókok</span>
+                <span className="kpi-label">Aktív e-mail fiókok</span>
                 <span className="kpi-value">
                   {accounts ? accounts.filter(a => a.status === 'active').length : 0}
                 </span>
@@ -1020,7 +1057,7 @@ export default function App({ user, onLogout, onUserUpdate }) {
                   setCurrentPage(1);
                 }}
               >
-                <option value="">Összes Gmail fiók</option>
+                <option value="">Összes e-mail fiók</option>
                 {accounts.map(acc => (
                   <option key={acc.id} value={acc.id}>{acc.email}</option>
                 ))}
@@ -1192,7 +1229,7 @@ export default function App({ user, onLogout, onUserUpdate }) {
                         </div>
                       </div>
                       <div style={{fontSize: '0.8rem', color: 'var(--text-muted)'}}>
-                        Gmail Cím: {selectedEmailFull.gmail_account ? selectedEmailFull.gmail_account.email : ''}
+                        E-mail fiók: {selectedEmailFull.gmail_account ? selectedEmailFull.gmail_account.email : ''}
                       </div>
                       {getAutoReplyLabel(selectedEmailFull) && (
                         <div style={{
@@ -1314,7 +1351,7 @@ export default function App({ user, onLogout, onUserUpdate }) {
           </div>
         )}
 
-        {/* Tab 3: Gmail Accounts Manager */}
+        {/* Tab 3: E-mail Accounts Manager */}
         {activeTab === 'accounts' && (
           <div className="dashboard-grid" style={{gridTemplateColumns: '1.2fr 1fr'}}>
             
@@ -1327,15 +1364,27 @@ export default function App({ user, onLogout, onUserUpdate }) {
               {/* Add account card */}
               <div className="card" style={{marginBottom: '1.5rem'}}>
                 <h3 className="card-title">
-                  Új Gmail Fiók hozzáadása
+                  Új e-mail fiók hozzáadása
                 </h3>
                 <form onSubmit={handleAddAccount}>
                   <div className="form-group">
-                    <label className="form-label">Gmail E-mail Cím</label>
+                    <label className="form-label">Szolgáltató</label>
+                    <select
+                      className="form-input"
+                      value={newAccount.provider}
+                      onChange={(e) => handleProviderChange(e.target.value)}
+                    >
+                      <option value="gmail">Gmail (Alkalmazás-jelszó)</option>
+                      <option value="custom">Egyéni IMAP (cPanel / tárhely)</option>
+                    </select>
+                  </div>
+
+                  <div className="form-group">
+                    <label className="form-label">E-mail cím</label>
                     <input 
                       type="email" 
                       className="form-input" 
-                      placeholder="példa@gmail.com" 
+                      placeholder={newAccount.provider === 'custom' ? 'info@menteshetes.hu' : 'példa@gmail.com'} 
                       required
                       value={newAccount.email}
                       onChange={(e) => setNewAccount(prev => ({...prev, email: e.target.value}))}
@@ -1343,18 +1392,133 @@ export default function App({ user, onLogout, onUserUpdate }) {
                     {formErrors.email && <span className="form-error">{formErrors.email[0]}</span>}
                   </div>
 
+                  {newAccount.provider === 'custom' && (
+                    <div className="form-group">
+                      <label className="form-label">IMAP felhasználónév (ha nem a teljes e-mail cím)</label>
+                      <input
+                        type="text"
+                        className="form-input"
+                        placeholder="menteshe"
+                        value={newAccount.imap_username || ''}
+                        onChange={(e) => setNewAccount(prev => ({...prev, imap_username: e.target.value}))}
+                      />
+                      <span style={{fontSize: '0.8rem', color: 'var(--text-secondary)'}}>
+                        cPanel webmailnél gyakran csak a rövid név kell (pl. menteshe), nem info@menteshetes.hu.
+                      </span>
+                    </div>
+                  )}
+
                   <div className="form-group">
-                    <label className="form-label">Gmail Alkalmazás-jelszó (App Password)</label>
+                    <label className="form-label">
+                      {newAccount.provider === 'custom' ? 'Postafiók jelszó' : 'Gmail Alkalmazás-jelszó (App Password)'}
+                    </label>
                     <input 
                       type="password" 
                       className="form-input" 
-                      placeholder="xxxx xxxx xxxx xxxx" 
+                      placeholder={newAccount.provider === 'custom' ? 'Postafiók jelszava' : 'xxxx xxxx xxxx xxxx'} 
                       required
                       value={newAccount.password}
                       onChange={(e) => setNewAccount(prev => ({...prev, password: e.target.value}))}
                     />
                     {formErrors.password && <span className="form-error">{formErrors.password[0]}</span>}
                   </div>
+
+                  {newAccount.provider === 'custom' && (
+                    <>
+                      <div className="form-group">
+                        <label className="form-label">IMAP mappa (cPanel maildir)</label>
+                        <input
+                          type="text"
+                          className="form-input"
+                          placeholder="INBOX.info@menteshetes_hu"
+                          required
+                          value={newAccount.imap_mailbox || ''}
+                          onChange={(e) => setNewAccount(prev => ({...prev, imap_mailbox: e.target.value}))}
+                        />
+                        <span style={{fontSize: '0.8rem', color: 'var(--text-secondary)'}}>
+                          cPanel maildirnél gyakran nem sima INBOX, hanem pl. INBOX.info@menteshetes_hu (pont → aláhúzás a domainben).
+                        </span>
+                      </div>
+
+                      <div className="form-group">
+                        <label className="form-label">IMAP szerver</label>
+                        <input
+                          type="text"
+                          className="form-input"
+                          placeholder="mail.menteshetes.hu"
+                          required
+                          value={newAccount.imap_host}
+                          onChange={(e) => setNewAccount(prev => ({...prev, imap_host: e.target.value}))}
+                        />
+                      </div>
+
+                      <div className="form-group" style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem'}}>
+                        <div>
+                          <label className="form-label">IMAP port</label>
+                          <input
+                            type="number"
+                            className="form-input"
+                            min="1"
+                            max="65535"
+                            required
+                            value={newAccount.imap_port}
+                            onChange={(e) => setNewAccount(prev => ({...prev, imap_port: Number(e.target.value)}))}
+                          />
+                        </div>
+                        <div>
+                          <label className="form-label">IMAP titkosítás</label>
+                          <select
+                            className="form-input"
+                            value={newAccount.imap_encryption}
+                            onChange={(e) => setNewAccount(prev => ({...prev, imap_encryption: e.target.value}))}
+                          >
+                            <option value="ssl">SSL (993)</option>
+                            <option value="tls">TLS</option>
+                            <option value="none">Nincs</option>
+                          </select>
+                        </div>
+                      </div>
+
+                      <div className="form-group">
+                        <label className="form-label">SMTP szerver</label>
+                        <input
+                          type="text"
+                          className="form-input"
+                          placeholder="mail.menteshetes.hu"
+                          required
+                          value={newAccount.smtp_host}
+                          onChange={(e) => setNewAccount(prev => ({...prev, smtp_host: e.target.value}))}
+                        />
+                      </div>
+
+                      <div className="form-group" style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem'}}>
+                        <div>
+                          <label className="form-label">SMTP port</label>
+                          <input
+                            type="number"
+                            className="form-input"
+                            min="1"
+                            max="65535"
+                            required
+                            value={newAccount.smtp_port}
+                            onChange={(e) => setNewAccount(prev => ({...prev, smtp_port: Number(e.target.value)}))}
+                          />
+                        </div>
+                        <div>
+                          <label className="form-label">SMTP titkosítás</label>
+                          <select
+                            className="form-input"
+                            value={newAccount.smtp_encryption}
+                            onChange={(e) => setNewAccount(prev => ({...prev, smtp_encryption: e.target.value}))}
+                          >
+                            <option value="ssl">SSL (465)</option>
+                            <option value="tls">STARTTLS (587)</option>
+                            <option value="none">Nincs</option>
+                          </select>
+                        </div>
+                      </div>
+                    </>
+                  )}
 
                   <button 
                     type="submit" 
@@ -1397,6 +1561,7 @@ export default function App({ user, onLogout, onUserUpdate }) {
                           <div className="account-details">
                             <h4>{acc.email}</h4>
                             <p>
+                              {acc.provider === 'custom' ? 'Egyéni IMAP' : 'Gmail'} |{' '}
                               {acc.emails_count} levél letöltve |{' '}
                               {acc.last_fetched_at ? (
                                 `Szinkronizálva: ${new Date(acc.last_fetched_at).toLocaleTimeString('hu-HU')}`
@@ -1443,7 +1608,7 @@ export default function App({ user, onLogout, onUserUpdate }) {
                   </div>
                 ) : (
                   <p style={{color: 'var(--text-muted)', textAlign: 'center', padding: '2rem'}}>
-                    Még nem adtál meg Gmail fiókot.
+                    Még nem adtál meg e-mail fiókot.
                   </p>
                 )}
               </div>
@@ -1453,8 +1618,16 @@ export default function App({ user, onLogout, onUserUpdate }) {
             {/* Instruction manual setup guide */}
             <div className="card guide-container">
               <h3 className="card-title card-title--brand">
-                Gmail Beállítási Útmutató
+                {newAccount.provider === 'custom' ? 'Egyéni IMAP beállítások' : 'Gmail beállítási útmutató'}
               </h3>
+              {newAccount.provider === 'custom' ? (
+                <p style={{fontSize: '0.9rem', color: 'var(--text-secondary)', lineHeight: 1.5}}>
+                  A tárhelyen (cPanel) általában az alábbi beállítások működnek: IMAP <strong>993 / SSL</strong>, SMTP <strong>465 / SSL</strong> vagy <strong>587 / STARTTLS</strong>.
+                  A szerver neve gyakran <strong>mail.menteshetes.hu</strong> vagy <strong>imap.menteshetes.hu</strong>.
+                  Ez az alkalmazás <strong>csak IMAP-et</strong> használ a levelek letöltéséhez — a POP3 (995) port nem támogatott.
+                </p>
+              ) : (
+              <>
               <p style={{fontSize: '0.9rem', color: 'var(--text-secondary)', lineHeight: 1.5}}>
                 A Gmail biztonsági szabályai miatt a rendes e-mail jelszavad nem használható külső alkalmazásokkal. A biztonságos kapcsolódáshoz hozz létre egy <strong>Alkalmazás-jelszót (App Password)</strong>:
               </p>
@@ -1500,6 +1673,8 @@ export default function App({ user, onLogout, onUserUpdate }) {
                   <p style={{marginTop: '0.25rem'}}>Ezt másold ki szóközökkel együtt, és illeszd be a bal oldali űrlap jelszó mezőjébe!</p>
                 </div>
               </div>
+              </>
+              )}
             </div>
 
           </div>

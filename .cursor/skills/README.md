@@ -7,7 +7,7 @@ A csapat koordinátor és általános szerepek: `~/.cursor/skills/menteshetes-*`
 ## Elérhető skillek (repo + `~/.cursor/skills/`)
 
 - `gmail-evaluator-design`
-  - Fókusz: sötét dashboard UI, sidebar, inbox, detail panel, badge-ek, modalok.
+  - Fókusz: Budget2-style cream UI, sidebar, inbox, accounts form, badge-ek, modalok.
   - Használd: frontend kinézet/megjelenés módosításakor.
 
 - `gmail-evaluator-api-structure`

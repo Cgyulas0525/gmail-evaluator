@@ -82,11 +82,7 @@ class EmailComposeService
         ?string $references = null,
         string $logContext = ''
     ): void {
-        $dsn = sprintf(
-            'smtp://%s:%s@smtp.gmail.com:587',
-            rawurlencode($account->email),
-            rawurlencode($account->password)
-        );
+        $dsn = $account->smtpDsn();
 
         $transport = Transport::fromDsn($dsn);
         $mailer = new Mailer($transport);
