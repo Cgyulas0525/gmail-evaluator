@@ -34,7 +34,7 @@ Use this skill for backend and API-facing frontend work in the Gmail Evaluator D
 | EmailFetcherService | IMAP via `connect(GmailAccount)`, `$account->imapSelectCommand()` (not hardcoded INBOX), sync, MIME parsing |
 | EmailEvaluatorService | Gemini AI + rule-based fallback classification |
 | EmailProcessingService | Evaluate + optional auto-reply pipeline |
-| EmailAutoReplyService | Automatic billing/work replies via account SMTP (`smtpDsn()`) |
+| EmailAutoReplyService | Automatic billing/work replies via account SMTP (`smtpDsn()`); skips info/no-reply senders |
 | EmailComposeService | Manual reply/forward via account SMTP (`smtpDsn()`) |
 | EmailAttachmentService | BODYSTRUCTURE parsing + on-demand IMAP download |
 
@@ -50,6 +50,7 @@ Use this skill for backend and API-facing frontend work in the Gmail Evaluator D
 - Deduplicate by `message_id`; respect soft deletes via `Email::withTrashed()`
 - Store `imap_uid` and `attachments` JSON on sync for attachment download
 - Auto-reply categories from `config/auto_reply.php` / `.env`
+- Auto-reply skip: `EmailAutoReplyService::isNonReplyableSender()` — ne válaszoljon `info@…` és no-reply feladókra (`noreply`, `no-reply`, `donotreply`); `auto_reply_status: skipped`, reason: `non_replyable_sender`
 - IMAP literal reads must use byte-accurate fread (not line-based parsing for attachments)
 
 ## Account mail settings (`gmail_accounts`)

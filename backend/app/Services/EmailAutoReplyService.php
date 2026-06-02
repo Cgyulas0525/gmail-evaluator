@@ -38,6 +38,11 @@ class EmailAutoReplyService
             return;
         }
 
+        if ($this->isNonReplyableSender($senderEmail)) {
+            $this->markSkipped($email, 'non_replyable_sender');
+            return;
+        }
+
         if ($this->isOurAutoReplyMessage($email)) {
             $this->markSkipped($email, 'own_auto_reply_message');
             return;
@@ -216,6 +221,26 @@ class EmailAutoReplyService
         return GmailAccount::query()
             ->whereRaw('LOWER(email) = ?', [$senderEmail])
             ->exists();
+    }
+
+    private function isNonReplyableSender(string $senderEmail): bool
+    {
+        $atPos = strpos($senderEmail, '@');
+        if ($atPos === false) {
+            return false;
+        }
+
+        $localPart = strtolower(substr($senderEmail, 0, $atPos));
+
+        if ($localPart === 'info' || str_starts_with($localPart, 'info.')) {
+            return true;
+        }
+
+        if (preg_match('/^(no[-_.]?reply|donotreply|do[-_.]?not[-_.]?reply)$/i', $localPart)) {
+            return true;
+        }
+
+        return str_contains($localPart, 'noreply') || str_contains($localPart, 'no-reply');
     }
 
     private function isOurAutoReplyMessage(Email $email): bool
