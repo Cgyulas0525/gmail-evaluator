@@ -43,6 +43,11 @@ class EmailAutoReplyService
             return;
         }
 
+        if ($this->isTicketEmail($email)) {
+            $this->markSkipped($email, 'ticket_email');
+            return;
+        }
+
         if ($this->isOurAutoReplyMessage($email)) {
             $this->markSkipped($email, 'own_auto_reply_message');
             return;
@@ -241,6 +246,50 @@ class EmailAutoReplyService
         }
 
         return str_contains($localPart, 'noreply') || str_contains($localPart, 'no-reply');
+    }
+
+    private function isTicketEmail(Email $email): bool
+    {
+        $subject = mb_strtolower(trim((string) $email->subject));
+        $body = mb_strtolower(trim((string) $email->body));
+        $combined = $subject . ' ' . $body;
+
+        return $this->containsAny($combined, [
+            'belépő',
+            'belepo',
+            'színház',
+            'szinhaz',
+            'koncertjegy',
+            'mozijegy',
+            'vonatjegy',
+            'buszjegy',
+            'repülőjegy',
+            'repulojegy',
+            'jegyvásárlás',
+            'jegyvasarlas',
+            'jegy vásárlás',
+            'jegyed',
+            'jegyet',
+            'jegyeket',
+            'e-ticket',
+            'eticket',
+            'e ticket',
+            'boarding pass',
+            'boarding-pass',
+            'check-in',
+            'flight ticket',
+            'airline ticket',
+            'theater ticket',
+            'theatre ticket',
+            'event ticket',
+            'cinema ticket',
+            'train ticket',
+            'eventim',
+            'jegy.hu',
+            'ticketmaster',
+            'wizz air',
+            'ryanair',
+        ]);
     }
 
     private function isOurAutoReplyMessage(Email $email): bool
