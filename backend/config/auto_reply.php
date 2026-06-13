@@ -1,7 +1,7 @@
 <?php
 
 return [
-    'enabled' => env('AUTO_REPLY_ENABLED', true),
+    'enabled' => env('AUTO_REPLY_ENABLED', false),
 
     'categories' => array_filter(array_map(
         'trim',
